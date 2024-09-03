@@ -5,6 +5,9 @@ import (
 	"net/http"
 )
 
+// logError logs the given error using the application logger.
+// It takes the HTTP request and the error as parameters.
+// The error is printed to the logger using the Println method.
 func (app *application) logError(r *http.Request, err error) {
 	app.logger.Println(err)
 }
