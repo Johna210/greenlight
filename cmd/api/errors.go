@@ -9,9 +9,17 @@ import (
 // It takes the HTTP request and the error as parameters.
 // The error is printed to the logger using the Println method.
 func (app *application) logError(r *http.Request, err error) {
-	app.logger.Println(err)
+	app.logger.PrintError(err, map[string]string{
+		"request_method": r.Method,
+		"request_url":    r.URL.String(),
+	})
 }
 
+// errorResponse writes an error response to the http.ResponseWriter.
+// It takes the http.ResponseWriter, http.Request, status code, and error message as parameters.
+// The error message can be of any type.
+// It creates an envelope with the error message and writes it as JSON to the response writer.
+// If there is an error while writing the JSON, it logs the error and sets the response status code to 500.
 func (app *application) errorResponse(w http.ResponseWriter, r *http.Request,
 	status int, message interface{}) {
 	env := envelope{"error": message}
