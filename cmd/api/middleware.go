@@ -31,6 +31,17 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 	})
 }
 
+// rateLimit is a middleware function that implements rate limiting for incoming HTTP requests.
+// It restricts the number of requests that can be made within a certain time period for each client IP address.
+// The rate limit is based on a token bucket algorithm using the "golang.org/x/time/rate" package.
+// The function takes an http.Handler as input and returns an http.Handler.
+// It checks if rate limiting is enabled in the application configuration and extracts the client's IP address from the request.
+// If the IP address is not found in the clients map, a new rate limiter is initialized and added to the map.
+// The last seen time for the client is updated and the Allow() method is called on the rate limiter.
+// If the request is not allowed, a 429 Too Many Requests response is sent.
+// The function also includes a background goroutine that removes old entries from the clients map every minute.
+// This ensures that IP addresses that have not been seen within the last three minutes are removed from the map.
+// The rateLimit function is designed to be used as middleware in an HTTP server.
 func (app *application) rateLimit(next http.Handler) http.Handler {
 
 	// Delare a mutex and a map to hold the clients IP address and rate limiters.
