@@ -8,6 +8,7 @@ import (
 	"greenlight/internal/jsonlog"
 	"greenlight/internal/mailer"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,6 +37,9 @@ type config struct {
 		username string
 		password string
 		sender   string
+	}
+	cors struct {
+		trustedOrigins []string
 	}
 }
 
@@ -74,6 +78,12 @@ func main() {
 	flag.StringVar(&cfg.smtp.username, "smtp-username", "d1fcda62f3a786", "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "d51c3c08dece30", "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.alexedwards.net>", "SMTP sender")
+
+	// Using the flag.Func() to process the -cors-trusted-origins command line
+	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(s string) error {
+		cfg.cors.trustedOrigins = strings.Fields(s)
+		return nil
+	})
 
 	flag.Parse()
 

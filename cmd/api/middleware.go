@@ -178,6 +178,9 @@ func (app *application) autheticate(next http.Handler) http.Handler {
 	})
 }
 
+// requireAuthenticatedUser is a middleware function that checks if the user is authenticated before allowing access to the next handler.
+// If the user is anonymous, it sends an authentication required response.
+// It takes the next http.HandlerFunc as a parameter and returns an http.HandlerFunc.
 func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
@@ -191,6 +194,9 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 	})
 }
 
+// requireActivatedUser is a middleware function that checks if the user is activated before allowing access to the next handler.
+// If the user is not activated, it responds with an inactive account response.
+// It takes the next http.HandlerFunc as a parameter and returns an http.HandlerFunc.
 func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
@@ -206,6 +212,13 @@ func (app *application) requireActivatedUser(next http.HandlerFunc) http.Handler
 	return app.requireAuthenticatedUser(fn)
 }
 
+// requirePermission is a middleware function that checks if the user has the required permission code.
+// It takes a permission code and a http.HandlerFunc as parameters and returns a http.HandlerFunc.
+// The middleware function checks if the user has the permission code by retrieving all permissions for the user.
+// If there is an error retrieving the permissions, it returns a server error response.
+// If the user does not have the required permission, it returns a not permitted response.
+// Otherwise, it calls the next http.HandlerFunc in the chain.
+// This middleware function also requires the user to be activated, as enforced by the app.requireActivatedUser middleware.
 func (app *application) requirePermission(code string, next http.HandlerFunc) http.HandlerFunc {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
@@ -223,6 +236,38 @@ func (app *application) requirePermission(code string, next http.HandlerFunc) ht
 
 		next.ServeHTTP(w, r)
 	}
-
 	return app.requireActivatedUser(fn)
+}
+
+// enableCORS is a middleware function that enables Cross-Origin Resource Sharing (CORS) for the API.
+// It adds the necessary headers to the response to allow requests from trusted origins.
+// The trusted origins are defined in the application configuration.
+// If the request origin is found in the trusted origins list, the "Access-Control-Allow-Origin" header is set to the request origin.
+// This middleware function should be used in the request chain to handle CORS before passing the request to the next handler.
+func (app *application) enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Vary", "Origin")
+
+		w.Header().Add("Vary", "Access-Control-Request-Method")
+
+		origin := r.Header.Get("Origin")
+
+		if origin != "" && len(app.config.cors.trustedOrigins) != 0 {
+			for i := range app.config.cors.trustedOrigins {
+				if origin == app.config.cors.trustedOrigins[i] {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+
+					if r.Method == http.MethodOptions &&
+						r.Header.Get("Access-Control-Request-method") != "" {
+						w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
+						w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+						w.WriteHeader(http.StatusOK)
+						return
+					}
+				}
+			}
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
