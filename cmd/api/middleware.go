@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"greenlight/internal/data"
 	"greenlight/internal/validator"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tomasen/realip"
 
 	"github.com/felixge/httpsnoop"
 	"golang.org/x/time/rate"
@@ -90,11 +91,7 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		// Only carry out the check if rate limiring is enabled.
 		if app.config.limiter.enabled {
 			// Extract the client's IP adress from the request.
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				app.serverErrorResponse(w, r, err)
-				return
-			}
+			ip := realip.FromRequest(r)
 
 			// Lock the mutex to prevent this code from being executed concurrently.
 			mu.Lock()
